@@ -38,7 +38,7 @@ def loaded_parties():
 
 
 # TODO: complete the decoration
-@parties.route("/party/<id>")
+@parties.route("/party/<id>", methods=['GET', 'DELETE'])
 def single_party(id):
     global _LOADED_PARTIES
     result = ""
