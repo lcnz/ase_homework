@@ -1,7 +1,7 @@
 from flakon import JsonBlueprint
 from flask import abort, jsonify, request
 
-from bedrock_a_party.classes.party import CannotPartyAloneError, Party
+from bedrock_a_party.classes.party import CannotPartyAloneError, Party, NotInvitedGuestError, ItemAlreadyInsertedByUser, NotExistingFoodError
 
 parties = JsonBlueprint('parties', __name__)
 
@@ -10,72 +10,96 @@ _PARTY_NUMBER = 0  # index of the last created party
 
 
 # TODO: complete the decoration
-@parties.route("/parties")
+@parties.route("/parties", methods=['GET', 'POST'])
 def all_parties():
     result = None
     if request.method == 'POST':
         try:
             # TODO: create a party
+            result = create_party(request)
         except CannotPartyAloneError:
             # TODO: return 400
+            abort(400)
 
     elif request.method == 'GET':
         # TODO: get all the parties
+        result = get_all_parties() #in case inserst jsonify
 
     return result
 
 
 # TODO: complete the decoration
-@parties.route("/parties/loaded")
+@parties.route("/parties/loaded", methods=['GET'])
 def loaded_parties():
     # TODO: returns the number of parties currently loaded in the system
+    result = len(_LOADED_PARTIES)
+
+    return jsonify({ 'loaded_parties' : str(result) })
 
 
 # TODO: complete the decoration
-@parties.route("/party/<id>")
+@parties.route("/party/<id>", methods=['GET', 'DELETE'])
 def single_party(id):
     global _LOADED_PARTIES
     result = ""
 
     # TODO: check if the party is an existing one
+    exists_party(id)
 
     if 'GET' == request.method:
         # TODO: retrieve a party
+        result = _LOADED_PARTIES[id].serialize()
 
     elif 'DELETE' == request.method:
         # TODO: delete a party
+        del _LOADED_PARTIES[id]
 
     return result
 
 
 # TODO: complete the decoration
-@parties.route("/party/<id>/foodlist")
+@parties.route("/party/<id>/foodlist", methods=['GET'])
 def get_foodlist(id):
     global _LOADED_PARTIES
     result = ""
 
     # TODO: check if the party is an existing one
+    exists_party(id)
 
     if 'GET' == request.method:
         # TODO: retrieve food-list of the party
+        party = _LOADED_PARTIES[id]
+        result = party.get_food_list()
 
     return result
 
 
 # TODO: complete the decoration
-@parties.route("/party/<id>/foodlist/<user>/<item>")
+@parties.route("/party/<id>/foodlist/<user>/<item>", methods=['POST','DELETE'])
 def edit_foodlist(id, user, item):
     global _LOADED_PARTIES
 
     # TODO: check if the party is an existing one
+    exists_party(id)
     # TODO: retrieve the party
+    party = _LOADED_PARTIES[id]
     result = ""
 
     if 'POST' == request.method:
         # TODO: add item to food-list handling NotInvitedGuestError (401) and ItemAlreadyInsertedByUser (400)
+        try:
+            party.add_to_food_list(user, item)
+        except NotInvitedGuestError:
+            abort(401)
+        except ItemAlreadyInsertedByUser:
+            abort(400)
 
     if 'DELETE' == request.method:
         # TODO: delete item to food-list handling NotExistingFoodError (400)
+        try:
+            party.remove_from_food_list(item, user)
+        except NotExistingFoodError:
+            abort(400)
 
     return result
 
@@ -93,7 +117,7 @@ def create_party(req):
     try:
         guests = json_data['guests']
     except:
-        raise CannotPartyAloneError("you cannot party alone!")
+        raise CannotPartyAloneError()
 
     # add party to the loaded parties lists
     _LOADED_PARTIES[str(_PARTY_NUMBER)] = Party(_PARTY_NUMBER, guests)
