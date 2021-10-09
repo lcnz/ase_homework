@@ -23,7 +23,7 @@ def all_parties():
 
     elif request.method == 'GET':
         # TODO: get all the parties
-        result = get_all_parties() #in case inserst jsonify
+        result = get_all_parties()
 
     return result
 
@@ -33,8 +33,8 @@ def all_parties():
 def loaded_parties():
     # TODO: returns the number of parties currently loaded in the system
     result = len(_LOADED_PARTIES)
-
-    return jsonify({ 'loaded_parties' : str(result) })
+    
+    return jsonify({'loaded_parties': result})
 
 
 # TODO: complete the decoration
@@ -54,7 +54,7 @@ def single_party(id):
         # TODO: delete a party
         del _LOADED_PARTIES[id]
 
-    return result
+    return jsonify(result)
 
 
 # TODO: complete the decoration
@@ -69,10 +69,9 @@ def get_foodlist(id):
     if 'GET' == request.method:
         # TODO: retrieve food-list of the party
         party = _LOADED_PARTIES[id]
-        result = party.get_food_list()
+        result = party.get_food_list().serialize()
 
-    return result
-
+    return jsonify({'foodlist' : result})
 
 # TODO: complete the decoration
 @parties.route("/party/<id>/foodlist/<user>/<item>", methods=['POST','DELETE'])
@@ -88,7 +87,7 @@ def edit_foodlist(id, user, item):
     if 'POST' == request.method:
         # TODO: add item to food-list handling NotInvitedGuestError (401) and ItemAlreadyInsertedByUser (400)
         try:
-            party.add_to_food_list(user, item)
+            result = party.add_to_food_list(item, user).serialize()
         except NotInvitedGuestError:
             abort(401)
         except ItemAlreadyInsertedByUser:
@@ -98,6 +97,7 @@ def edit_foodlist(id, user, item):
         # TODO: delete item to food-list handling NotExistingFoodError (400)
         try:
             party.remove_from_food_list(item, user)
+            result = jsonify({'msg' : "Food deleted!"})
         except NotExistingFoodError:
             abort(400)
 
